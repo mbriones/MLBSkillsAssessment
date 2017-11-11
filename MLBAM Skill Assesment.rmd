@@ -1,0 +1,153 @@
+---
+title: "MLBAM Skills Assesment"
+author: "Miguel Briones"
+date: "January 21, 2017"
+output: pdf_document
+---
+  
+Data Set 1
+---------------
+First, we load the data:
+```{r cache=TRUE}
+library(corrplot)
+library(dplyr)
+library(cluster) 
+library(fpc)
+
+Data1 = read.csv("ds1.csv", header = TRUE)
+```
+
+Then see if there are any missing values:
+```{r}
+length(which(is.na(Data1)))
+```
+
+Now we observe the distributions of each observation
+```{r}
+par(mfrow=c(2,4))
+hist(Data1$x1, main="Hist of x1")
+hist(Data1$x2, main="Hist of x2")
+hist(Data1$x3, main="Hist of x3")
+hist(Data1$x5, main="Hist of x5")
+hist(Data1$x6, main="Hist of x6")
+hist(Data1$ya, main="Hist of ya")
+hist(Data1$yb, main="Hist of yb")
+hist(Data1$yc, main="Hist of yc")
+```
+
+We see that x1 has a uniform distribution, with all the data points appearing roughy at the same frequency. x2, x3, and x6 follow a normal distribution, while x5 follows a positively skewed distribution. For the Y data, ya and yc seem to follow a normal distribution, while yb shows a negatively skewed distribution. 
+
+Then we look at some of the summary statistics:
+```{r}
+summary(Data1)
+```
+
+We see that x1, x2, x3, and x6 are evenly distributed, as you would expect from their histograms. x5 has a mean of ~ 1.0 but a maximum value of 15.10, so there are one or more outliers in this dataset. The ya dataset has a mean of ~4 but a min of -64 and a max of 107, so this dataset contains a large variance. The yb data set is contained between 0 and 4, and the yc dataset is even more contained, with a mean approaching 0 and most of the observaitions falling near 0.
+
+Next we want to see if there are any correlations between the data sets:
+```{r}
+Data1obs = select(Data1, x1, x2, x3, x5, x6, ya, yb, yc)
+cor(Data1obs)
+```
+
+And we plot them using the corrplot package, which allows us to visually see the strength of the correlations between each dataset:
+```{r}
+corrplot(cor(Data1obs), method = "ellipse")
+```
+
+We can see the dataset ya is correlated with x1 (r = 0.4654), x2 (r = 0.6756), and x3 (r = 0.4111). The dataset yb is correlated with x1 (r = 0.9459) and x3 (r = 0.7754). The dataset y3 seems to not be correlated with any of the x data sets; every correlation is ~ 0. 
+
+Therefore, we can begin by trying to predict the ya dataset. We can use the three x datasets that are most closely correlated with ya, and see which model is best. First, we start with the best correlation, which is ya ~ x2, to create the first model. We then add the next best correlated dataset, x1, to create the second model. Finally, we add the third best correlated dataset, x3, to create the third model:
+
+```{r}
+yamodel = lm(ya ~ x2, data = Data1)
+summary(yamodel)
+
+yamodel2 = lm(ya ~ x1 + x2, data = Data1)
+summary(yamodel2)
+
+yamodel3 = lm(ya ~ x1 + x2 + x3, data = Data1)
+summary(yamodel3)
+```
+
+Then we run an ANOVA to see which model is the best predictor:
+```{r}
+anova(yamodel, yamodel2, yamodel3)
+```
+
+We see that Model 2 and 3 are significantly different from Model 1, and Model 2 has the bigger F statistic than Model 3, so we can conclude that Model 2 is the best predictor for the ya dataset.
+
+Next, we do the same for the yb model, and chose the datasets that bet correlate with yb, which in this case is x1 and x3:
+```{r}
+ybmodel = lm(yb ~ x1, data = Data1)
+summary(ybmodel)
+
+ybmodel2 = lm(yb ~ x1 + x3, data = Data1)
+summary(ybmodel2)
+
+anova(ybmodel, ybmodel2)
+```
+
+Looking at the ANOVA, we see that the comparison between Model 1 and Model 2 was statistically significant, thereby telling us that Model 2, with the added dataset (x3) is a better predictor than Model 1. 
+
+Because there was no strong correlation between any of the x datasets with yc, I did not run a linear regression.
+
+I would argue that the chosen model for ya is the strongest model for predicting the ya dataset, due to the strong correlations between the chosen variables. The chosen model for yb is a good model, but I would argue that it is not as strong as the chosen model for ya, again because of the correlations between the chosen variables.
+
+
+Dataset 2
+-----------------
+First we import the second dataset:
+```{r}
+Data2 = read.csv("ds2.csv", header = TRUE)
+```
+
+Then we check whether there are any missing values in the dataset:
+```{r}
+length(which(is.na(Data2)) == TRUE)
+```
+
+Then we look at the summary of the data and create histograms for each of the variables in the dataset:
+```{r}
+summary(Data2)
+
+par(mfrow=c(2,5))
+hist(Data2$X1, main = "Hist X1")
+hist(Data2$X2, main = "Hist X2")
+hist(Data2$X3, main = "Hist X3")
+hist(Data2$X4, main = "Hist X4")
+hist(Data2$X5, main = "Hist X5")
+hist(Data2$X6, main = "Hist X6")
+hist(Data2$X7, main = "Hist X7")
+hist(Data2$X8, main = "Hist X8")
+hist(Data2$X9, main = "Hist X9")
+hist(Data2$X10, main = "Hist X10")
+```
+
+The data set seems to be composed of observations that range from -37 to 37. The histogram data show that variables x1, x6, and x7 show a slight binomial distribution. Variables x2, x4, x5, x8 and x10 show a normal distribution. X3 follows a slightly negatively skewed distribution and X9 a slightly positively skewed distribution. Overall, the data set seems to have observations that are distributed in four different ways.   
+
+In order to visually see how the data is clustered, I plotted the data using the hierarchical clustering method:
+```{r}
+par(mfrow=c(1,1))
+Data2data = select(Data2, X1, X2, X3, X4, X5, X6, X7, X8, X9, X10)
+Data2Cluster = hclust(dist(Data2data))
+plot(Data2Cluster)
+```
+
+We can see that at height 70, the data is split into three clusters. If we cut the hierarchical cluster by 3, we see the following:
+```{r}
+Data2ClusterCut = cutree(Data2Cluster, 3)
+table(Data2ClusterCut)
+```
+
+It seems that there are three 3 sources that the data could've came from.
+
+If we graph the clusters, we see where there is overlap between the data:
+```{r}
+clusplot(Data2data, Data2ClusterCut, color=TRUE, shade=TRUE, 
+         labels=2, lines=0)
+
+plotcluster(Data2data, Data2ClusterCut)
+```
+
+We see that there are three distinct clusters where the data fit. 
